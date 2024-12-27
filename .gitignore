@@ -302,6 +302,7 @@ clab-*
 
 # Ignore downloaded containers
 *.tar
+*.tar.xz
 # Vagrant Files
 .vagrant/
 
@@ -317,3 +318,6 @@ local
 
 # Dev Containers
 .devcontainer/dev
+
+# Key Folders
+.ssh/
