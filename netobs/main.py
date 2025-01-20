@@ -248,9 +248,9 @@ def docker_compose_cmd(
         str: Docker compose command
     """
     if is_truthy(ENVVARS.get("DOCKER_COMPOSE_WITH_HASH", None)):
-        exec_cmd = f"docker-compose --project-name {compose_name} -f {docker_compose_file}"
+        exec_cmd = f"sudo docker-compose --project-name {compose_name} -f {docker_compose_file}"
     else:
-        exec_cmd = f"docker compose --project-name {compose_name} -f {docker_compose_file}"
+        exec_cmd = f"sudo docker compose --project-name {compose_name} -f {docker_compose_file}"
 
     if verbose:
         exec_cmd += " --verbose"
