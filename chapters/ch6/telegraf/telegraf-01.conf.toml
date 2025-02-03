@@ -1,35 +1,87 @@
 [agent]
- hostname = "telegraf-01"
+hostname = "telegraf-01"
 
 
 [[inputs.snmp]]
- agents = ["ceos-01"]
- version = 2
- community = "${SNMP_COMMUNITY}"
- interval = "60s"
- timeout = "10s"
- retries = 3
+agents = ["ceos-01"]
+version = 2
+community = "${SNMP_COMMUNITY}"
+interval = "60s"
+timeout = "10s"
+retries = 3
+
+# Tag to identify the stage of the data pipeline
+[inputs.snmp.tags]
+data_type = "raw"
+
+[[inputs.snmp.table]]
+name = "interface"
 
 
- [[inputs.snmp.table]]
-   name = "interface"
+[[inputs.snmp.table.field]]
+# IF-MIB::ifDescr
+oid = "1.3.6.1.2.1.2.2.1.2"
+is_tag = true
+name = "name"
 
 
-   [[inputs.snmp.table.field]]
-     # IF-MIB::ifDescr
-     oid = "1.3.6.1.2.1.2.2.1.2"
-     is_tag = true
+[[inputs.snmp.table.field]]
+# IF-MIB::ifHCInOctets
+oid = "1.3.6.1.2.1.31.1.1.1.6"
+name = "in_octets"
 
 
-   [[inputs.snmp.table.field]]
-     # IF-MIB::ifHCInOctets
-     oid = "1.3.6.1.2.1.31.1.1.1.6"
+[[inputs.snmp.table.field]]
+# IF-MIB::ifHCOutOctets
+oid = "1.3.6.1.2.1.31.1.1.1.10"
+name = "out_octets"
 
+[[processors.rename]]
+# Rename the tag "agent_host" to "device"
+[[processors.rename.replace]]
+tag = "agent_host"
+dest = "device"
 
-   [[inputs.snmp.table.field]]
-     # IF-MIB::ifHCOutOctets
-     oid = "1.3.6.1.2.1.31.1.1.1.10"
+[[processors.regex]]
+# Filter metrics that have "interface" name
+namepass = ["interface"]
 
+# Regex processor operations on the metric tags
+[[processors.regex.tags]]
+# Name of the tag to match
+key = "name"
+# Regex pattern to match
+pattern = "^Ethernet.*$"
+# Name of the new tag
+result_key = "intf_role"
+# Replacement string
+replacement = "peer"
+
+[[processors.regex.tags]]
+# Name of the tag to match
+key = "name"
+# Regex pattern to match
+pattern = "^Management.*$"
+# Name of the new tag
+result_key = "intf_role"
+# Replacement string
+replacement = "mgmt"
+
+[[processors.regex.tags]]
+# Name of the tag to match
+key = "name"
+# Regex pattern to match
+pattern = "^Loopback.*$"
+# Name of the new tag
+result_key = "intf_role"
+# Replacement string
+replacement = "loopback"
 
 [[outputs.file]]
- files = ["stdout"]
+files = ["stdout"]
+
+# Send the metrics to Kafka
+[[outputs.kafka]]
+brokers = ["kafka-01:29092"]
+topic = "telegraf-data-collection"
+routing_tag = "host"
