@@ -321,3 +321,6 @@ local
 
 # Key Folders
 .ssh/
+
+# cEOS Files
+cEOS/*

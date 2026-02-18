@@ -1,31 +1,77 @@
 #cloud-config
 
-apt:
-  sources:
-    docker.list:
-      source: deb [arch=amd64] https://download.docker.com/linux/ubuntu $RELEASE stable
-      keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
-    netdevops.list:
-      source: deb [trusted=yes] https://netdevops.fury.site/apt/ /
+# apt:
+#   sources:
+#     docker.list:
+#       source: deb [arch=amd64] https://download.docker.com/linux/ubuntu $RELEASE stable
+#       keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+#     netdevops.list:
+#       source: deb [trusted=yes] https://netdevops.fury.site/apt/ /
 
-# Install packages
+# Install or upgrade system dependencies
 package_reboot_if_required: true
 package_update: true
 package_upgrade: true
 packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - software-properties-common
+  - python3-pip
+  - virtualenv
+  - python3-setuptools
+  - apache2-utils
   - nano
   - git
-  - python3-pip
-  - docker-ce
-  - docker-ce-cli
-  - containerlab
 
-# run commands
+# Download & Install Docker
 runcmd:
-  - git clone https://github.com/rvivian/Modern-Network-Observability.git
-  - curl -O ${ceos-url}
-  - pip install --upgrade pip
+  - [ wcurl, "https://get.docker.com", -O, /run/docker/get-docker.sh ]
+  - [ bash, -c, /run/docker/get-docker.sh ]
+  - [ pip, install, docker ]
 
 # add rvivian to docker group
 groups:
   - docker: [rvivian]
+
+# Download & Install Miniconda python environment
+runcmd:
+  - [ wcurl, "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh", -O, /run/miniconda/install-miniconda.sh ]
+  - [ bash, /run/miniconda/install_miniconda.sh, -b, -p, $HOME/miniconda ]
+  - [ rm, /run/miniconda/install_miniconda.sh ]
+write_files:
+  - path: $HOME/.bashrc
+    content: |
+      export PATH=$HOME/miniconda/bin:$PATH
+    append: true
+
+# Create localhost records in /etc/hosts
+write_files:
+  - path: /etc/hosts
+    content: |
+      127.0.0.1 prometheus
+      127.0.0.1 grafana
+      127.0.0.1 loki
+      127.0.0.1 nautobot
+    append: true
+
+# Download and install Containerlab
+runcmd:
+  - [ wcurl, "https://get.containerlab.dev", -O, /run/clab/get-clab.sh ]
+  - [ bash, -c, /run/clab/get-clab.sh ]
+
+# Download cEOS container image
+runcmd:
+  - [ wcurl, ${ceos-url}, -O, /run/cEOS/cEOS.tar ]
+
+# Import cEOS container image
+runcmd:
+  - [ docker, import, /run/cEOS/cEOS.tar, ceos:image ]
+
+# Clone lab
+runcmd:
+  - [ git, clone, "https://github.com/rvivian/Modern-Network-Observability.git", /root/network-observability-lab ]
+  - [ mv, /root/network-observability-lab/example.env, /root/network-observability-lab/.env ]
+  - [ cd, /root/network-observability-lab/, '&&', pip, install, . ]
+
+

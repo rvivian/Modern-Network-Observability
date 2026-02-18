@@ -14,22 +14,22 @@ topology:
       kind: ceos
       mgmt-ipv4: 198.51.100.11
       startup-config: startups/ceos-01.conf
-      publish:
-        - tcp/50051
-        - tcp/80
-        - tcp/443
-        - udp/161
-        - tcp/5900
+      ports:
+        - 50051:50051/tcp
+        - 5080:80/tcp
+        - 50443:443/tcp
+        - 50161:161/udp
+        - 50590:5900/tcp
     ceos-02:
       kind: ceos
       mgmt-ipv4: 198.51.100.12
       startup-config: startups/ceos-02.conf
-      publish:
-        - tcp/50051
-        - tcp/80
-        - tcp/443
-        - udp/161
-        - tcp/5900
+      ports:
+        - 51051:50051/tcp
+        - 5180:80/tcp
+        - 51443:443/tcp
+        - 51161:161/udp
+        - 51590:5900/tcp
       # ports:
       #   - 51161:161/udp
 

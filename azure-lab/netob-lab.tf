@@ -88,7 +88,7 @@ resource "azurerm_linux_virtual_machine" "netob-vm" {
 
   admin_ssh_key {
     username   = "rvivian"
-    public_key = file("./.ssh/id_rsa_az.pub")
+    public_key = file("./.ssh/id_ecdsa.pub")
   }
 
   os_disk {
