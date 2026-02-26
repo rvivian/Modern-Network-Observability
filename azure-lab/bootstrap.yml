@@ -1,0 +1,129 @@
+---
+- name: Bootsrap netobs server
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  tasks:
+    - name: Install or upgrade aptitude
+      ansible.builtin.apt:
+        name: aptitude
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: Install or upgrade system dependencies
+      ansible.builtin.apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - pyton3-pip
+          - virtualenv
+          - python3-setuptools
+          - apache2-utils
+          - git
+        state: latest
+      tags:
+        - skip_ansible_lint
+      retries: 3
+      delay: 10
+      register: apt_install
+      until: apt_install is succeeded
+
+    - name: Download Docker
+      ansible.builtin.get_url:
+        url: https://get.docker.com
+        dest: /run/docker/get-docker.sh
+        mode: "0755"
+
+    - name: Install Docker
+      ansible.builtin.command: bash -c /run/docker/get-docker.sh
+      register: docker_install
+      retires: 3
+      delay: 10
+      changed_when: docker_install.rc != 0
+
+    - name: Install Python packages
+      ansible.builtin.pip:
+        name:
+          - docker
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: Download Miniconda python environment
+      ansible.builtin.get_url:
+        url: https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+        dest: /run/conda/install-miniconda.sh
+        mode: "0550"
+
+    - name: Install Miniconda
+      ansible.builtin.shell: bash /run/conda/install-miniconda.sh
+      register: miniconda_install
+      failed_when:
+        - "'ERROR: File or directory already exists' not in miniconda_install.stderr"
+        - "'installation finished.' not in miniconda_install.stdout"
+      changed_when: "'ERROR: File or directory exists' not in miniconda_install.stderr"
+
+    - name: Remove Miniconda installer
+      ansible.builtin.file:
+        state: absent
+        path: /run/conda/install-miniconda.sh
+
+    - name: Add miniconda bin to path
+      ansible.builtin.shell: echo 'export PATH=$HOME/miniconda/bin:$PATH' >> $HOME/.bashrc
+      register: miniconda_path
+      change_when: miniconda_path.rc != 0
+
+    - name: Create localhost records in /etc/hosts
+      ansible.builtin.lineinfile:
+        state: present
+        path: /etc/hosts
+        regexp: ".*{{ item }}"
+        line: "127.0.0.1 {{ item }}"
+      with_items:
+        - "prometheus"
+        - "grafana"
+        - "loki"
+        - "nautobot"
+    
+    - name: Download containerlab
+      ansible.builtin.get_url:
+        url: https://get.containerlab.dev
+        dest: /run/clab/get-clab.sh
+        mode: "0755"
+
+    - name: Install containerlab
+      ansible.builting.command: bash -c /run/clab/get-clab.sh
+      register: clab_install
+      change_when: clab_install.rc != 0
+
+#### Setup system
+- name: Setup netobs app
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars:
+    ansible_python_interpreter: /root/miniconda/bin/python
+  environment:
+    PATH: "root/miniconda/bin:root/.local/bin:{{ ansible_env.PATH }}"
+  tasks:
+    - name: Clone Modern-Network-Observability
+      ansible.builtin.git:
+        repo: https://github.com/rvivian/Modern-Network-Observability.git
+        dest: /root/network-observability-lab
+        version: main
+    
+    - name: copy .env file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../.env"
+        dest: /root/network-observability-lab/.env
+        mode: "0644"
+
+    - name: Install network-observability-lab
+      ansible.builtin.shell:
+        cmd: "cd /root/network-observability-lab && pip install ."
+        executable: /bin/bash
+      register: netobs_install
+      changed_when: netobs_install.rc != 0

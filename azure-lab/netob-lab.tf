@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.0.2"
+      version = "~> 4.61"
     }
   }
 }
@@ -88,7 +88,7 @@ resource "azurerm_linux_virtual_machine" "netob-vm" {
 
   admin_ssh_key {
     username   = "rvivian"
-    public_key = file("./.ssh/id_ecdsa.pub")
+    public_key = file("~/.ssh/netob_id.pub")
   }
 
   os_disk {
